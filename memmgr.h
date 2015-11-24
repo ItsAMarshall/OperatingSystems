@@ -31,9 +31,10 @@ class MemMgr {
 		}
 
 		bool InsertProcess(Process* process) {
-		  bool success = true;
-		  // if (algorithm == "first") {
-		  //   success = this->placeProcessFirstFit_(process);
+		  bool success = false;
+		  if (algorithm == "first") {
+		    success = this->InsertFirst(process);
+		  }
 		  // } else if (algorithm == "best") {
 		  //   success = this->placeProcessBestFit_(process);
 		  // } else if (algorithm == "next") {
@@ -70,14 +71,50 @@ class MemMgr {
 		int timeMax;
 		string algorithm;
 		
-		bool InsertFirst(const Process& process);
+		bool InsertFirst( Process* process)  {
+		  // Start at the first index not taken up by the system
+		  // processes.
+		  int index = GetNextFree(0);
+		  int blockSize = 0;
+		  int nextFree;
+
+		  // Get the size of the next free contiguous block in memory.
+		  while (blockSize < process->memorySize && index < size) {
+		    nextFree = GetNextFree(index);
+		    blockSize = GetFreeAmount(nextFree);
+		    index = nextFree + blockSize;
+		  }
+		  // If there is not enough memory for this process, return false.
+		  if (blockSize < process->memorySize) {
+		    return false;
+		  }
+		  for (int i = 0; i < process->memorySize; ++i) {
+		    memory[nextFree + i] = process->procNum;
+		  }
+		  return true;
+		}
 		bool InsertBest(const Process& process);
 		bool InsertNext(const Process& process);
 		bool InsertWorst(const Process& process);
 		void InsertNon(const Process& process);
 		
-		int GetNextFree(int hintIndex);
-		int GetFreeAmount(int index);
+		int GetNextFree(int index)  {
+		  for (int i = index; i < size; ++i) {
+		    if (memory[i] == '.') {
+		      return i;
+		    }
+		  }
+		  return 0;
+		}
+		int GetFreeAmount(int index)  {
+		  for (int i = index; i < size; ++i) {
+		    if (memory[i] != '.') {
+		      return i - index;
+		    }
+		  }
+
+		  return size - index;
+		}
 		void Defrag();
 };
 

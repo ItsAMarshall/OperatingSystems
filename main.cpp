@@ -12,6 +12,7 @@
 		3) PARTLY DONE Incorporate Lucas's memory manager
 		4) DONE Print out memory block 
 		5) Add process to memory block
+		6) Save statistics to external file
 
 */
 
