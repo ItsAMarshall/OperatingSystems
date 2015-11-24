@@ -9,8 +9,8 @@
 
 		1) DONE Add process to queue when it is their arrival time
 		2) DONE Add Round Robin functionality 
-		3) Incorporate Lucas's memory manager
-		4) Print out memory block 
+		3) PARTLY DONE Incorporate Lucas's memory manager
+		4) DONE Print out memory block 
 		5) Add process to memory block
 
 */
@@ -25,8 +25,9 @@
 #include <string>
 #include <queue>
 #include <vector>
-#include "memmgr.h"
 #include "process.h"
+#include "memmgr.h"
+
 
 using namespace std;
 
@@ -87,10 +88,10 @@ void PrintQueue( deque<Process>* cpuQueue) {
 	cout << "]" << endl;
 }
 
-//USed to print memory block
-void PrintMemory () {
+// //USed to print memory block
+// void PrintMemory () {
 
-}
+// }
 
 //Used for debugging the I/O priority queue not used in final program
 void PrintIOQueue( priority_queue<Process>* ioQueue) {
@@ -174,18 +175,24 @@ void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, 
 		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);		
 }
 
-void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode) {
+void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode, MemMgr* memory) {
 	vector<Process>::iterator itr = processVector->begin();
 
 	while( itr != processVector->end() ) {
 		if( itr->arrivalTime == timer ) {
-			PushBack(cpuQueue, &(*itr), mode);
+
+			if( memory->InsertProcess(&(*itr)) ) {
+				PushBack(cpuQueue, &(*itr), mode);
+
+				PrintTime(timer);
+				cout << "Process '" << itr->procNum << "' added to system";
+				PrintQueue(cpuQueue);
+
+				processVector->erase(itr);
+			}
 
 			PrintTime(timer);
-			cout << "Process '" << itr->procNum << "' added to system";
-			PrintQueue(cpuQueue);
-
-			processVector->erase(itr);
+			memory->PrintMemory();
 
 		}
 		else {
@@ -206,7 +213,11 @@ bool CheckRR( Process* cpu, deque<Process>* cpuQueue, int timer, int t_slice) {
 	return false;
 }
 
-void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
+void Perform(vector<Process>* processVector, int t_cs, const string& mode, const string& memMode) {
+
+	MemMgr* memory = new MemMgr(memMode);
+	memory->InitMemory();
+
 	static int timer = 0;
 	timer = 0;
 	int t_slice = 80;
@@ -225,7 +236,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 
 	while( true ) {
 
-		CheckArrival(processVector, cpuQueue, timer, mode);
+		CheckArrival(processVector, cpuQueue, timer, mode, memory);
 
 		preemptCatch = NULL;
 
@@ -237,17 +248,17 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 
 			}
 		}
-
-		if( mode == "RR" && CheckRR(cpu, cpuQueue, timer, t_slice) ) {
-			PrintTime(timer);
-			cout << "Process '" << cpu->procNum << "' preempted due to time slice expiration ";
-			cout << "CPU time is: " << cpu->cpuTimer << " ";
-			PrintQueue(cpuQueue);
-
-			preemptCatch = &cpuQueue->front();
-			cpuQueue->pop_front();
-			LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
-			timer += t_cs;
+		if( cpuInUse ){
+			if( mode == "RR" && CheckRR(cpu, cpuQueue, timer, t_slice) ) {
+				PrintTime(timer);
+				cout << "Process '" << cpu->procNum << "' preempted due to time slice expiration ";
+				PrintQueue(cpuQueue);
+	
+				preemptCatch = &cpuQueue->front();
+				cpuQueue->pop_front();
+				LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
+				timer += t_cs;
+			}
 		}
 
 		preemptCatch = CheckIO( ioQueue, cpuQueue, cpu, timer, mode );
@@ -316,7 +327,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 //Gets the ball rolling by populating
 //the Queue and then calling Perform()
 int main(int argc, char* argv[]) {
-	string mode;
+	string mode, memMode;
 	int t_cs = 13;
 	int n;
 	bool err;
@@ -324,13 +335,14 @@ int main(int argc, char* argv[]) {
 	vector<Process>* processVector = new vector<Process>;
 
 	mode = "RR";
+	memMode = "first";
 	// file.clear();
 	// file.seekg( 0, file.beg);
 	err = ReadFile(file, processVector, mode);
 	if( err )
 		return -1;
 	n = processVector->size();
-	Perform( processVector, t_cs, mode);
+	Perform( processVector, t_cs, mode, memMode);
 
 	cout << endl << endl;
 

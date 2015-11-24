@@ -7,33 +7,23 @@ class Process
 {
 	public:
 		Process() { }
-		Process(char procNum_, int arrivalTime_, int burstTime_, int burstCount_, int ioTime_, int memory_) : procNum( procNum_ ), arrivalTime( arrivalTime_ ), burstTime( burstTime_ ), burstCount( burstCount_ ), ioTime( ioTime_), memory( memory_ ) {	
+		Process(char procNum_, int arrivalTime_, int burstTime_, int burstCount_, int ioTime_, int memorySize_) : procNum( procNum_ ), arrivalTime( arrivalTime_ ), burstTime( burstTime_ ), burstCount( burstCount_ ), ioTime( ioTime_), memorySize( memorySize_ ) {	
+				inMemory = false;
 				cpuTimer = 0;
 				timeWaiting = 0;
 				preempted = false;
 		}
-		Process( const Process& other ) : procNum( other.procNum ), arrivalTime( other.arrivalTime), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), ioTimeEnd( other.ioTimeEnd ), memory( other.memory), cpuTimer( other.cpuTimer), preempted(other.preempted) { 
+		Process( const Process& other ) : procNum( other.procNum ), arrivalTime( other.arrivalTime), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), memorySize( other.memorySize), ioTimeEnd( other.ioTimeEnd ), cpuTimer( other.cpuTimer), preempted(other.preempted), inMemory(other.inMemory) { 
 			timeWaiting = 0;
 		}
 		~Process() { }
 
 		int const getSize() const {
-		  return memory;
+		  return memorySize;
 		}
 
 		bool hasArrived(int timer) {
-
 			return (arrivalTime == timer);
-		  // bool arrival = false;
-		  // for (int i = 0; i < static_cast<int>(this->arrivalTimes_.size()); ++i) {
-		  //   if (this->arrivalTimes_[i] == timer) {
-		  //     arrival = true;
-		  //     break;
-		  //   }
-		  // }
-
-		  // if (arrival) this->isActive_ = true;
-		  // return arrival;
 		}
 
 		char procNum;
@@ -41,12 +31,13 @@ class Process
 		int burstTime;
 		int burstCount;
 		int ioTime;
-		int memory;
+		int memorySize;
 
 		int ioTimeEnd;
 		int cpuTimer;
 		int timeWaiting;
 		bool preempted;
+		bool inMemory;
 };
 
 //Used for Priority Queue

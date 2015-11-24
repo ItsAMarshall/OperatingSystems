@@ -2,7 +2,6 @@
 #define _MEMMGR_H_
 
 #include <iostream>
-#include <vector>
 #include <string>
 #include "process.h"
 
@@ -11,11 +10,13 @@ using namespace std;
 class MemMgr {
 	public:
 	
-		explicit MemMgr(int s) : size(s) {
-			this->memory = new char[s];
-			this->clockTime = 0;
-			this->lastProcess = 0;
-			this->timeMax = 0;
+		MemMgr(string mode_) {
+			size = 256;
+			memory = new char[size];
+			clockTime = 0;
+			lastProcess = 0;
+			timeMax = 0;
+			algorithm = mode_;
 		}
 		
 		~MemMgr() { delete[] this->memory; }
@@ -23,11 +24,42 @@ class MemMgr {
 		int GetClock();
 		void SetTimeMax(int max);
 		int GetMax();
-		void InitMemory(vector<Process> & processes);
-		void InsertProcess(Process & process, string algorithm, 
-							vector<Process> & processes, bool isDefragging);
+		void InitMemory() {
+			for( int i = 0; i < size; ++i ) {
+				memory[i] = '.';
+			}
+		}
+
+		bool InsertProcess(Process* process) {
+		  bool success = true;
+		  // if (algorithm == "first") {
+		  //   success = this->placeProcessFirstFit_(process);
+		  // } else if (algorithm == "best") {
+		  //   success = this->placeProcessBestFit_(process);
+		  // } else if (algorithm == "next") {
+		  //   success = this->placeProcessNextFit_(process);
+		  // } else {
+		  //   std::cerr << "ERROR: INVALID ALGORITHM" << std::endl;
+		  //   exit(EXIT_FAILURE);
+		  if (!success) {
+		      return false;
+		  } else {
+		    process->inMemory = true;
+		    return true;
+		  }
+		}
 		void RemoveProcess(Process & process);
-		void VomitData();
+		void PrintMemory() {
+			cout << "Simulated Memory:" << endl;
+			cout << string(32, '=');
+			for( int i = 0; i < size; ++i) {
+				if( i%32 == 0) {
+					cout << endl;
+				}
+				cout << memory[i];
+			}
+			cout << endl << string(32, '=') << endl;;
+		}
 		
 	private:
 	
@@ -36,6 +68,7 @@ class MemMgr {
 		int clockTime;
 		int lastProcess;
 		int timeMax;
+		string algorithm;
 		
 		bool InsertFirst(const Process& process);
 		bool InsertBest(const Process& process);
@@ -45,7 +78,7 @@ class MemMgr {
 		
 		int GetNextFree(int hintIndex);
 		int GetFreeAmount(int index);
-		void Defrag(std::vector<Process> &processes, const Process &process);
+		void Defrag();
 };
 
 #endif
