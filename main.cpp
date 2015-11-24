@@ -1,9 +1,20 @@
-/*  
- *  Author: Marshall Shortledge
- *  Date: October 5th, 2015
- *  Class: Operating Systems
- *  Assignment: Project 2
+/*
+	NOTE:
+
+		Nameing Schemes:
+			Functions: first letter of each word is capitalized
+			variables: first letter of each word is capitalized except first word
+
+	TODO:
+
+		1) Add process to queue when it is their arrival time
+		2) Incorporate Lucas's memory manager
+		3) Print out memory block 
+		4) Add process to memory block
+
 */
+
+
 
 #include <algorithm>
 #include <deque>
@@ -17,30 +28,48 @@ using namespace std;
 
 class Process
 {
-public:
-	Process() { }
-
-	Process(int procNum_, int burstTime_, int burstCount_, int ioTime_, int priority_) : procNum( procNum_ ), burstTime( burstTime_ ), burstCount( burstCount_ ), ioTime( ioTime_), priority( priority_ ) {	
-			cpuTimer = 0;
+	public:
+		Process() { }
+		Process(char procNum_, int arrivalTime_, int burstTime_, int burstCount_, int ioTime_, int memory_) : procNum( procNum_ ), arrivalTime( arrivalTime_ ), burstTime( burstTime_ ), burstCount( burstCount_ ), ioTime( ioTime_), memory( memory_ ) {	
+				cpuTimer = 0;
+				timeWaiting = 0;
+				preempted = false;
+		}
+		Process( const Process& other ) : procNum( other.procNum ), arrivalTime( other.arrivalTime), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), ioTimeEnd( other.ioTimeEnd ), memory( other.memory), cpuTimer( other.cpuTimer), preempted(other.preempted) { 
 			timeWaiting = 0;
-			preempted = false;
-	}
+		}
+		~Process() { }
 
-	Process( const Process& other ) : procNum( other.procNum ), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), ioTimeEnd( other.ioTimeEnd ), priority( other.priority), cpuTimer( other.cpuTimer), preempted(other.preempted) { 
-		timeWaiting = 0;
-	}
+		int const getSize() const {
+		  return memory;
+		}
 
-	~Process() { }
+		bool hasArrived(int timer) {
 
-	int procNum;
-	int burstTime;
-	int burstCount;
-	int ioTime;
-	int ioTimeEnd;
-	int priority;
-	int cpuTimer;
-	int timeWaiting;
-	bool preempted;
+			return (arrivalTime == timer);
+		  // bool arrival = false;
+		  // for (int i = 0; i < static_cast<int>(this->arrivalTimes_.size()); ++i) {
+		  //   if (this->arrivalTimes_[i] == timer) {
+		  //     arrival = true;
+		  //     break;
+		  //   }
+		  // }
+
+		  // if (arrival) this->isActive_ = true;
+		  // return arrival;
+		}
+
+		char procNum;
+		int arrivalTime;
+		int burstTime;
+		int burstCount;
+		int ioTime;
+		int memory;
+
+		int ioTimeEnd;
+		int cpuTimer;
+		int timeWaiting;
+		bool preempted;
 };
 
 //Used for Priority Queue
@@ -54,27 +83,11 @@ bool operator < (const Process &a, const Process &b) {
 	return true;
 }
 
-bool PWADequeSort(const Process &a, const Process &b) {
-	if( a.priority < b.priority ) {
-		return true;
-	}
-	else if( a.priority == b.priority && a.procNum < b.procNum ) {
-		return true;
-	}
-	return false;
-}
-
 void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode ) {
 	deque<Process>::iterator itr;
 	proc->timeWaiting = 0;
 	for( itr = cpuQueue->begin(); itr != cpuQueue->end(); ++itr ) {
-		if( mode == "PWA" ){
-			if( itr->priority > proc->priority ||( itr->priority == proc->priority && itr->procNum > proc->procNum) ) {
-				cpuQueue->insert(itr, *proc);
-				return;
-			}
-		}
-		else if ( mode == "SRT" ) {
+		if ( mode == "SRT" ) {
 			if( itr->burstTime > proc->burstTime ) {
 				cpuQueue->insert(itr, *proc);
 				return;
@@ -93,16 +106,18 @@ bool ReadFile(fstream & file, deque<Process>* cpuQueue, const string& mode) {
 		if( s[s.find_first_not_of(' ')] == '#') {
 			continue;
 		}
-		int procNum_, burstTime_, burstCount_, ioTime_, priority_;
+		char procNum_;
+		int arrivalTime_, burstTime_, burstCount_, ioTime_, memory_;
 		stringstream temp(s);
 
 		temp >> procNum_ >> c;
+		temp >> arrivalTime_ >> c;
 		temp >> burstTime_ >> c;
 		temp >> burstCount_ >> c;
 		temp >> ioTime_ >> c;
-		temp >> priority_ >> c;
+		temp >> memory_ >> c;
 
-		Process proc(procNum_, burstTime_, burstCount_, ioTime_, priority_);
+		Process proc(procNum_, arrivalTime_, burstTime_, burstCount_, ioTime_, memory_);
 		if( mode == "FCFS")
 			cpuQueue->push_back(proc);
 		else 
@@ -127,6 +142,11 @@ void PrintQueue( deque<Process>* cpuQueue) {
 	cout << "]" << endl;
 }
 
+//USed to print memory block
+void PrintMemory () {
+
+}
+
 //Used for debugging the I/O priority queue not used in final program
 void PrintIOQueue( priority_queue<Process>* ioQueue) {
 	int size = ioQueue->size();
@@ -139,17 +159,9 @@ void PrintIOQueue( priority_queue<Process>* ioQueue) {
 }
 
 bool Preempt( Process* cpu, Process* proc, const string& mode ) {
-	if( mode == "PWA" ){
-		if( proc->priority < cpu->priority ){
+	if( proc->burstTime < (cpu->burstTime - cpu->cpuTimer ) ) {
 			cpu->preempted = true;
 			return true;
-		}
-	}
-	else {
-		if( proc->burstTime < (cpu->burstTime - cpu->cpuTimer ) ) {
-			cpu->preempted = true;
-			return true;
-		}
 	}
 	return false;
 }
@@ -161,7 +173,7 @@ void LoadCPU( deque<Process>* cpuQueue, Process* proc, Process* cpu , int timer,
 	if( cpu->preempted == false)
 		cpu->cpuTimer = 0;
 	PrintTime(timer);
-	cout << "P" << cpu->procNum << " started using the CPU ";
+	cout << "Process '" << cpu->procNum << "' started using the CPU ";
 	//cout << "==END TIME: " << cpu->burstTime - cpu->cpuTimer + timer;
 	PrintQueue(cpuQueue);
 
@@ -173,29 +185,24 @@ void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* i
 	proc->burstCount--;
 	if( proc->burstCount == 0 ) {
 		PrintTime(timer);
-		cout << "P" << proc->procNum << " terminated ";
+		cout << "Process '" << proc->procNum << "' terminated ";
 		PrintQueue(cpuQueue);
 		proc = NULL;
 		return;
 	}
 
 	PrintTime(timer);
-	cout << "P" << proc->procNum << " completed its CPU burst ";
+	cout << "Process '" << proc->procNum << "' completed its CPU burst ";
 	PrintQueue(cpuQueue);
 
 	PrintTime(timer);
-	cout << "P" << proc->procNum << " performing I/O ";
+	cout << "Process '" << proc->procNum << "' performing I/O ";
 	PrintQueue(cpuQueue);
 	proc->ioTimeEnd = proc->ioTime + timer;
 	ioQueue->push(*proc);
 	proc = NULL;
 }
 
-//Checks to see if Process is done with its I/O
-//If so, it moves it to the end of the Queue.
-//Only checks top of priority queue because it is
-//sorted by end time of I/O and then by name if there
-//is a tie
 Process* CheckIO( priority_queue<Process>* ioQueue, deque<Process>* cpuQueue, Process* cpu, int timer, const string& mode ) {
 
 	if( ioQueue->size() != 0 ) {
@@ -213,30 +220,15 @@ Process* CheckIO( priority_queue<Process>* ioQueue, deque<Process>* cpuQueue, Pr
 	return NULL;
 }
 
-void IncrementWait(deque<Process>* cpuQueue) {
-	Process* ptr;
-	for( unsigned int index = 0; index < cpuQueue->size(); ++index) {
-		ptr = &cpuQueue[0][index];
-		ptr->timeWaiting++;
-		if( ptr->timeWaiting/ptr->burstTime >= 3 && ptr->timeWaiting%ptr->burstTime != 0 && ptr->priority > 0 ) {
-				ptr->priority--;
-				ptr->timeWaiting = 0;
-		}
-	}
-	sort(cpuQueue->begin(), cpuQueue->end(), PWADequeSort);
-}
-
 void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, const string& mode, int timer, int t_cs) {
 		PrintTime(timer);
-		cout << "P" << cpu->procNum << " preempted by P" << preemptCatch->procNum << " ";
+		cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
 		PushBack(cpuQueue, cpu, mode);
 		PrintQueue(cpuQueue);
 		//timer += t_cs;
-		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
-		
+		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);		
 }
 
-//Main function that handles the calling of other helper functions
 void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
 	static int timer = 0;
 	timer = 0;
@@ -253,17 +245,6 @@ void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
 	//if less than cpu priority thats a preempt
 
 	while( true ) {
-		if( mode == "PWA" && cpuInUse && cpuQueue->size() > 0 ) {
-			preemptCatch = new Process(cpuQueue->front() );
-			if( Preempt(cpu, preemptCatch, mode) ){
-				cpuQueue->pop_front();
-				
-				SwapPreempt(cpuQueue, cpu, preemptCatch, mode, timer, t_cs);
-				
-			}
-			delete preemptCatch;
-		}
-
 		//increment wait times
 		//if wait time / burstTime >= 3 increase priority.
 		preemptCatch = NULL;
@@ -277,30 +258,24 @@ void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
 		preemptCatch = CheckIO( ioQueue, cpuQueue, cpu, timer, mode );
 		if (preemptCatch != NULL) {
 
-			cout << "P" << preemptCatch->procNum << " completed I/O ";
-			if( mode == "FCFS" ) {
-				cpuQueue->push_back(*preemptCatch);
+			cout << "Process '" << preemptCatch->procNum << "' completed I/O ";
+			if( Preempt(cpu, preemptCatch, mode) ) {
 				PrintQueue(cpuQueue);
+				if( cpu->burstCount > 0){
+					PushBack(cpuQueue, cpu, mode);
+				
+					PrintTime(timer);
+					cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
+					PrintQueue(cpuQueue);
+				}
+				
+				LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
+				cpuInUse = true;
 			}
 			else {
-				if( Preempt(cpu, preemptCatch, mode) ) {
-					PrintQueue(cpuQueue);
-					if( cpu->burstCount > 0){
-						PushBack(cpuQueue, cpu, mode);
-					
-						PrintTime(timer);
-						cout << "P" << cpu->procNum << " preempted by P" << preemptCatch->procNum << " ";
-						PrintQueue(cpuQueue);
-					}
-					
-					LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
-					cpuInUse = true;
-				}
-				else {
-					preemptCatch->preempted = false;
-					PushBack(cpuQueue, preemptCatch, mode);
-					PrintQueue(cpuQueue);
-				}
+				preemptCatch->preempted = false;
+				PushBack(cpuQueue, preemptCatch, mode);
+				PrintQueue(cpuQueue);
 			}
 
 			ioQueue->pop();
@@ -327,15 +302,13 @@ void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
 			PrintQueue(cpuQueue);     
 			return; 
 		}
-		if( mode == "PWA") {
-			IncrementWait(cpuQueue);
-		}
 		
 		++timer;
 		++cpu->cpuTimer;
 		
 	}
 }
+
 
 //Gets the ball rolling by populating
 //the Queue and then calling Perform()
@@ -347,18 +320,9 @@ int main(int argc, char* argv[]) {
 	fstream file("processes.txt");
 	deque<Process>* cpuQueue = new deque<Process>;
 
-	mode = "FCFS";
-	err = ReadFile(file, cpuQueue, mode);
-	if( err )
-		return -1;
-	n = cpuQueue->size();
-	Perform( cpuQueue, t_cs, mode);
-
-	cout << endl << endl;
-
 	mode = "SRT";
-	file.clear();
-	file.seekg( 0, file.beg);
+	// file.clear();
+	// file.seekg( 0, file.beg);
 	err = ReadFile(file, cpuQueue, mode);
 	if( err )
 		return -1;
@@ -366,15 +330,9 @@ int main(int argc, char* argv[]) {
 	Perform( cpuQueue, t_cs, mode);
 
 	cout << endl << endl;
-
-	mode = "PWA";
-	file.clear();
-	file.seekg( 0, file.beg);
-	err = ReadFile(file, cpuQueue, mode);
-	if( err )
-		return -1;
-	n = cpuQueue->size();
-	Perform( cpuQueue, t_cs, mode);
 
 	return 0;
 }
+
+
+
