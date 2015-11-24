@@ -11,8 +11,10 @@
 		2) DONE Add Round Robin functionality 
 		3) PARTLY DONE Incorporate Lucas's memory manager
 		4) DONE Print out memory block 
-		5) Add process to memory block
-		6) Save statistics to external file
+		5) DONE Add process to memory block
+		6) DONE Remove process from memory block
+		7) Add defragmentation functionality
+		8) Save statistics to external file
 
 */
 
@@ -128,12 +130,15 @@ void LoadCPU( deque<Process>* cpuQueue, Process* proc, Process* cpu , int timer,
 }
 
 //Moves process from "CPU" to I/O priority queue
-void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* ioQueue, int timer ) {
+void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* ioQueue, int timer, MemMgr* memory ) {
 	proc->burstCount--;
 	if( proc->burstCount == 0 ) {
+		memory->RemoveProcess(proc);
 		PrintTime(timer);
 		cout << "Process '" << proc->procNum << "' terminated ";
 		PrintQueue(cpuQueue);
+		PrintTime(timer);
+		memory->PrintMemory();
 		proc = NULL;
 		return;
 	}
@@ -244,7 +249,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 		if( cpuInUse && cpu != NULL) {
 			if( cpu->cpuTimer >= cpu->burstTime) {
 				cpu->preempted = false;
-				LoadIO( cpu, cpuQueue, ioQueue, timer );
+				LoadIO( cpu, cpuQueue, ioQueue, timer, memory );
 				cpuInUse = false;
 
 			}

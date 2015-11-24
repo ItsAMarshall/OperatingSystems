@@ -49,18 +49,26 @@ class MemMgr {
 		    return true;
 		  }
 		}
-		void RemoveProcess(Process & process);
-		void PrintMemory() {
-			cout << "Simulated Memory:" << endl;
-			cout << string(32, '=');
-			for( int i = 0; i < size; ++i) {
-				if( i%32 == 0) {
-					cout << endl;
-				}
-				cout << memory[i];
+		void RemoveProcess(Process* process) {
+		for (int i = 0; i < size; ++i) {
+	    if (memory[i] == process->procNum) {
+	      memory[i] = '.';
+	    }
+  	}	
+		process->inMemory = false;
+	}
+
+	void PrintMemory() {
+		cout << "Simulated Memory:" << endl;
+		cout << string(32, '=');
+		for( int i = 0; i < size; ++i) {
+			if( i%32 == 0) {
+				cout << endl;
 			}
-			cout << endl << string(32, '=') << endl;;
+			cout << memory[i];
 		}
+		cout << endl << string(32, '=') << endl;;
+	}
 		
 	private:
 	
