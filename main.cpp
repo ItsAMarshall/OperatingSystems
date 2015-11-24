@@ -8,7 +8,7 @@
 	TODO:
 
 		1) DONE Add process to queue when it is their arrival time
-		2) Add Round Robin functionality 
+		2) DONE Add Round Robin functionality 
 		3) Incorporate Lucas's memory manager
 		4) Print out memory block 
 		5) Add process to memory block
@@ -248,9 +248,22 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 	}
 }
 
+bool CheckRR( Process* cpu, deque<Process>* cpuQueue, int timer, int t_slice) {
+	if ( cpuQueue->size() == 0 ) {
+		return false;
+	}
+	if (cpu->cpuTimer % t_slice == 0) {
+		cpu->preempted = true;
+		cpuQueue->push_back(*cpu);
+		return true;
+	}
+	return false;
+}
+
 void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 	static int timer = 0;
 	timer = 0;
+	int t_slice = 80;
 	Process* preemptCatch = NULL;
 	deque<Process>* cpuQueue = new deque<Process>;
 	priority_queue<Process>* ioQueue = new priority_queue<Process>;
@@ -267,37 +280,58 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 	while( true ) {
 
 		CheckArrival(processVector, cpuQueue, timer, mode);
-		//increment wait times
-		//if wait time / burstTime >= 3 increase priority.
+
 		preemptCatch = NULL;
+
 		if( cpuInUse && cpu != NULL) {
-			if( cpu->cpuTimer == cpu->burstTime) {
+			if( cpu->cpuTimer >= cpu->burstTime) {
+				cpu->preempted = false;
 				LoadIO( cpu, cpuQueue, ioQueue, timer );
 				cpuInUse = false;
 
 			}
 		}
+
+		if( mode == "RR" && CheckRR(cpu, cpuQueue, timer, t_slice) ) {
+			PrintTime(timer);
+			cout << "Process '" << cpu->procNum << "' preempted due to time slice expiration ";
+			cout << "CPU time is: " << cpu->cpuTimer << " ";
+			PrintQueue(cpuQueue);
+
+			preemptCatch = &cpuQueue->front();
+			cpuQueue->pop_front();
+			LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
+			timer += t_cs;
+		}
+
 		preemptCatch = CheckIO( ioQueue, cpuQueue, cpu, timer, mode );
 		if (preemptCatch != NULL) {
 
 			cout << "Process '" << preemptCatch->procNum << "' completed I/O ";
-			if( Preempt(cpu, preemptCatch, mode) ) {
+			if( mode == "RR" ) {
+				cpuQueue->push_back(*preemptCatch);
 				PrintQueue(cpuQueue);
-				if( cpu->burstCount > 0){
-					PushBack(cpuQueue, cpu, mode);
-				
-					PrintTime(timer);
-					cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
-					PrintQueue(cpuQueue);
-				}
-				
-				LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
-				cpuInUse = true;
 			}
 			else {
-				preemptCatch->preempted = false;
-				PushBack(cpuQueue, preemptCatch, mode);
-				PrintQueue(cpuQueue);
+				if( Preempt(cpu, preemptCatch, mode) ) {
+					PrintQueue(cpuQueue);
+					if( cpu->burstCount > 0){
+						PushBack(cpuQueue, cpu, mode);
+					
+						PrintTime(timer);
+						cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
+						PrintQueue(cpuQueue);
+					}
+					
+					LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
+					timer += t_cs;
+					cpuInUse = true;
+				}
+				else {
+					preemptCatch->preempted = false;
+					PushBack(cpuQueue, preemptCatch, mode);
+					PrintQueue(cpuQueue);
+				}
 			}
 
 			ioQueue->pop();
@@ -311,6 +345,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 			cpuQueue->pop_front();
 			//cout << preemptCatch->cpuTimer << endl;
 			LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
+			timer += t_cs;
 			//cout << preemptCatch->cpuTimer << endl;
 			cpuInUse = true;
 
@@ -327,7 +362,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 		
 		++timer;
 		++cpu->cpuTimer;
-		
+		//cout << timer << " : " << cpu->cpuTimer << endl;
 	}
 }
 
@@ -342,7 +377,7 @@ int main(int argc, char* argv[]) {
 	fstream file("processes.txt");
 	vector<Process>* processVector = new vector<Process>;
 
-	mode = "SRT";
+	mode = "RR";
 	// file.clear();
 	// file.seekg( 0, file.beg);
 	err = ReadFile(file, processVector, mode);
