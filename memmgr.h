@@ -20,10 +20,7 @@ class MemMgr {
 		}
 		
 		~MemMgr() { delete[] this->memory; }
-		void UpdateClock();
-		int GetClock();
-		void SetTimeMax(int max);
-		int GetMax();
+
 		void InitMemory() {
 			for( int i = 0; i < size; ++i ) {
 				memory[i] = '.';
@@ -69,6 +66,25 @@ class MemMgr {
 				cout << memory[i];
 			}
 			cout << endl << string(32, '=') << endl;;
+		}
+
+		int Defrag() {
+		  
+		  int count = 0;
+
+		  int index = GetNextFree(0);
+		  index += GetFreeAmount(index);
+		  while( index < size ) {
+		  	while(memory[index] == '.' && index < size-1) {
+		  		++index;
+		  	}
+		  	memory[GetNextFree(0)] = memory[index];
+		  	memory[index] = '.';
+		  	++count;
+		  	++index;
+		  }
+
+		  return count;
 		}
 		
 	private:
@@ -175,7 +191,7 @@ class MemMgr {
 
 		  return size - index;
 		}
-		void Defrag();
+
 };
 
 #endif

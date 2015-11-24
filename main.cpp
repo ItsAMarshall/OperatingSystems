@@ -184,8 +184,9 @@ void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, 
 void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode, MemMgr* memory) {
 	vector<Process>::iterator itr = processVector->begin();
 
+
 	while( itr != processVector->end() ) {
-		if( itr->arrivalTime == timer ) {
+		if( itr->arrivalTime <= timer ) {
 
 			if( memory->InsertProcess(&(*itr)) ) {
 				PushBack(cpuQueue, &(*itr), mode);
@@ -195,6 +196,42 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 				PrintQueue(cpuQueue);
 
 				processVector->erase(itr);
+
+				cout << processVector->size() << endl;
+			}
+			else {
+				PrintTime(timer);
+				cout << "Process '" << itr->procNum << "' unable to be added; lack of memory" << endl;
+				
+				PrintTime(timer);
+				cout << "Performing defragmentation (suspending all processes)" << endl;
+				
+				PrintTime(timer);
+				memory->PrintMemory();
+				int blocks = memory->Defrag();
+				timer += blocks;
+
+				PrintTime(timer);
+				cout << "Completed defragmentation (moved " << blocks << " memory units)" << endl;
+
+				PrintTime(timer);
+				memory->PrintMemory();
+
+				if( memory->InsertProcess(&(*itr)) ) {
+					PushBack(cpuQueue, &(*itr), mode);
+
+					PrintTime(timer);
+					cout << "Process '" << itr->procNum << "' added to system";
+					PrintQueue(cpuQueue);
+
+					processVector->erase(itr);
+				}
+				else {
+					PrintTime(timer);
+					cout << "Unable to add Process '" << itr->procNum << "'" << endl;
+					processVector->erase(itr);
+					continue;
+				}
 			}
 
 			PrintTime(timer);
