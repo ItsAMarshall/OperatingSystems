@@ -7,10 +7,11 @@
 
 	TODO:
 
-		1) Add process to queue when it is their arrival time
-		2) Incorporate Lucas's memory manager
-		3) Print out memory block 
-		4) Add process to memory block
+		1) DONE Add process to queue when it is their arrival time
+		2) Add Round Robin functionality 
+		3) Incorporate Lucas's memory manager
+		4) Print out memory block 
+		5) Add process to memory block
 
 */
 
@@ -23,6 +24,7 @@
 #include <sstream>
 #include <string>
 #include <queue>
+#include <vector>
 
 using namespace std;
 
@@ -99,7 +101,7 @@ void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode ) {
 }
 
 //Reads in Processes.txt, parses data and adds themto Queue
-bool ReadFile(fstream & file, deque<Process>* cpuQueue, const string& mode) {
+bool ReadFile(fstream & file, vector<Process>* processVector, const string& mode) {
 	char c = '|';
 	string s;
 	while( getline(file, s) ) {
@@ -118,10 +120,7 @@ bool ReadFile(fstream & file, deque<Process>* cpuQueue, const string& mode) {
 		temp >> memory_ >> c;
 
 		Process proc(procNum_, arrivalTime_, burstTime_, burstCount_, ioTime_, memory_);
-		if( mode == "FCFS")
-			cpuQueue->push_back(proc);
-		else 
-			PushBack(cpuQueue, &proc, mode);
+		processVector->push_back(proc);
 	}
 	return false;
 }
@@ -229,10 +228,31 @@ void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, 
 		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);		
 }
 
-void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
+void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode) {
+	vector<Process>::iterator itr = processVector->begin();
+
+	while( itr != processVector->end() ) {
+		if( itr->arrivalTime == timer ) {
+			PushBack(cpuQueue, &(*itr), mode);
+
+			PrintTime(timer);
+			cout << "Process '" << itr->procNum << "' added to system";
+			PrintQueue(cpuQueue);
+
+			processVector->erase(itr);
+
+		}
+		else {
+			++itr;
+		}
+	}
+}
+
+void Perform(vector<Process>* processVector, int t_cs, const string& mode) {
 	static int timer = 0;
 	timer = 0;
 	Process* preemptCatch = NULL;
+	deque<Process>* cpuQueue = new deque<Process>;
 	priority_queue<Process>* ioQueue = new priority_queue<Process>;
 	bool cpuInUse = false;
 	Process* cpu = new Process();
@@ -245,6 +265,8 @@ void Perform(deque<Process>* cpuQueue, int t_cs, const string& mode) {
 	//if less than cpu priority thats a preempt
 
 	while( true ) {
+
+		CheckArrival(processVector, cpuQueue, timer, mode);
 		//increment wait times
 		//if wait time / burstTime >= 3 increase priority.
 		preemptCatch = NULL;
@@ -318,16 +340,16 @@ int main(int argc, char* argv[]) {
 	int n;
 	bool err;
 	fstream file("processes.txt");
-	deque<Process>* cpuQueue = new deque<Process>;
+	vector<Process>* processVector = new vector<Process>;
 
 	mode = "SRT";
 	// file.clear();
 	// file.seekg( 0, file.beg);
-	err = ReadFile(file, cpuQueue, mode);
+	err = ReadFile(file, processVector, mode);
 	if( err )
 		return -1;
-	n = cpuQueue->size();
-	Perform( cpuQueue, t_cs, mode);
+	n = processVector->size();
+	Perform( processVector, t_cs, mode);
 
 	cout << endl << endl;
 
