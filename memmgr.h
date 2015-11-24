@@ -1,5 +1,10 @@
+#ifndef _MEMMGR_H_
+#define _MEMMGR_H_
+
+#include <iostream>
 #include <vector>
 #include <string>
+#include "process.h"
 
 using namespace std;
 
@@ -41,4 +46,6 @@ class MemMgr {
 		int GetNextFree(int hintIndex);
 		int GetFreeAmount(int index);
 		void Defrag(std::vector<Process> &processes, const Process &process);
-}
+};
+
+#endif
