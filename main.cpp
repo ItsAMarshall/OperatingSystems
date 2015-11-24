@@ -8,7 +8,7 @@
 	TODO:
 
 		1) DONE Add process to queue when it is their arrival time
-		2) Add Round Robin functionality 
+		2) DONE Add Round Robin functionality 
 		3) Incorporate Lucas's memory manager
 		4) Print out memory block 
 		5) Add process to memory block
