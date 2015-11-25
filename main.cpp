@@ -228,7 +228,7 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 				}
 				else {
 					PrintTime(timer);
-					cout << "Unable to add Process '" << itr->procNum << "'" << endl;
+					cout << "Unable to add Process '" << itr->procNum << "' after defragmentation. Dropping process" << endl;
 					processVector->erase(itr);
 					continue;
 				}
