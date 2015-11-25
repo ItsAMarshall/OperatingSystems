@@ -38,7 +38,7 @@ using namespace std;
 
 void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode, int timer ) {
 	deque<Process>::iterator itr;
-	proc->timeWaiting = 0;
+	//proc->timeWaiting = 0;
 	proc->turnAroundStart = timer;
 
 	for( itr = cpuQueue->begin(); itr != cpuQueue->end(); ++itr ) {
@@ -95,11 +95,6 @@ void PrintQueue( deque<Process>* cpuQueue) {
 	cout << "]" << endl;
 }
 
-// //USed to print memory block
-// void PrintMemory () {
-
-// }
-
 //Used for debugging the I/O priority queue not used in final program
 void PrintIOQueue( priority_queue<Process>* ioQueue) {
 	int size = ioQueue->size();
@@ -140,6 +135,8 @@ void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* i
 	proc->burstCount--;
 	proc->turnAroundTotal = timer - proc->turnAroundStart;
 	statistics->AddTurnAroundTime(proc->turnAroundTotal);
+	statistics->AddWaitTime(proc->timeWaiting);
+	proc->timeWaiting = 0;
 
 	if( proc->burstCount == 0 ) {
 		memory->RemoveProcess(proc);
@@ -181,6 +178,14 @@ Process* CheckIO( priority_queue<Process>* ioQueue, deque<Process>* cpuQueue, Pr
 	return NULL;
 }
 
+void IncrementWait(deque<Process>* cpuQueue) {
+	Process* ptr;
+	for( unsigned int index = 0; index < cpuQueue->size(); ++index) {
+			ptr = &cpuQueue[0][index];
+			ptr->timeWaiting++;
+	}
+}
+
 // void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, const string& mode, int timer, int t_cs, stats* statistics) {
 // 		PrintTime(timer);
 // 		cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
@@ -190,9 +195,10 @@ Process* CheckIO( priority_queue<Process>* ioQueue, deque<Process>* cpuQueue, Pr
 // 		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs, statistics);		
 // }
 
-void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode, MemMgr* memory, stats* statistics) {
+void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int* time, const string& mode, MemMgr* memory, stats* statistics) {
 	vector<Process>::iterator itr = processVector->begin();
-
+	int t_memmove = 10;
+	int timer = *time;
 
 	while( itr != processVector->end() ) {
 		if( itr->arrivalTime <= timer ) {
@@ -218,7 +224,9 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 				PrintTime(timer);
 				memory->PrintMemory();
 				int blocks = memory->Defrag();
-				timer += blocks;
+				timer += blocks*t_memmove;
+				*time = timer;
+				statistics->AddDefragTime(blocks*t_memmove);
 
 				PrintTime(timer);
 				cout << "Completed defragmentation (moved " << blocks << " memory units)" << endl;
@@ -293,7 +301,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 
 	while( true ) {
 
-		CheckArrival(processVector, cpuQueue, timer, mode, memory, statistics);
+		CheckArrival(processVector, cpuQueue, &timer, mode, memory, statistics);
 
 		preemptCatch = NULL;
 
@@ -374,7 +382,8 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 			PrintQueue(cpuQueue);     
 			return; 
 		}
-		
+
+		IncrementWait(cpuQueue);
 		++timer;
 		++cpu->cpuTimer;
 		//cout << timer << " : " << cpu->cpuTimer << endl;
@@ -408,6 +417,7 @@ int main(int argc, char* argv[]) {
 	statistics->Print(output);
 	cout << endl;
 
+	processVector->clear();
 	mode = "SRT";
 	memMode = "Best-Fit";
 	statistics->Reset("SRT", "Best-Fit");
@@ -421,6 +431,7 @@ int main(int argc, char* argv[]) {
 	statistics->Print(output);
 	cout << endl;
 
+	processVector->clear();
 	mode = "SRT";
 	memMode = "Next-Fit";
 	statistics->Reset("SRT", "Next-Fit");
@@ -434,6 +445,7 @@ int main(int argc, char* argv[]) {
 	statistics->Print(output);
 	cout << endl;
 
+	processVector->clear();
 	mode = "RR";
 	memMode = "First-Fit";
 	statistics->Reset("RR", "First-Fit");
@@ -447,6 +459,7 @@ int main(int argc, char* argv[]) {
 	statistics->Print(output);
 	cout << endl;
 
+	processVector->clear();
 	mode = "RR";
 	memMode = "Best-Fit";
 	statistics->Reset("RR", "Best-Fit");
@@ -460,6 +473,7 @@ int main(int argc, char* argv[]) {
 	statistics->Print(output);
 	cout << endl;
 
+	processVector->clear();
 	mode = "RR";
 	memMode = "Next-Fit";
 	statistics->Reset("RR", "Next-Fit");

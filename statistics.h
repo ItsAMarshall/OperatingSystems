@@ -77,6 +77,7 @@ public:
 		output << " -- average wait time: " << waitTimeAverage << " ms" << endl;
 		output << " -- average turnaround time: " << turnAroundtimeAverage << " ms" << endl;
 		output << " -- total number of context switches: " << contextSwitch << endl;
+		output << " -- total time spend defragmenting: " << defragTimeTotal << " ms" << endl;
 	}
 
 

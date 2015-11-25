@@ -121,11 +121,19 @@ class MemMgr {
 
 		bool InsertBest(Process* process) {
 			int index = GetNextFree(0);
-		  int blockSize = 0;
+		  int blockSize = GetFreeAmount(index);
 		  int nextFree;
 
 		  int bestFit = size;
 		  int bestIndex = -1;
+
+		  if( index == 0 && blockSize > process->memorySize) {
+		  	for (int i = 0; i < process->memorySize; ++i) {
+		    	memory[bestIndex + i] = process->procNum;
+		  	}
+		  	return true;
+		  }
+
 		  // Loop through memory.
 		  while (index < size) {
 		    // Get the size of the next free block of memory.

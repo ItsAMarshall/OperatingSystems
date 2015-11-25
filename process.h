@@ -13,9 +13,9 @@ class Process
 				timeWaiting = 0;
 				preempted = false;
 		}
-		Process( const Process& other ) : procNum( other.procNum ), arrivalTime( other.arrivalTime), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), memorySize( other.memorySize), ioTimeEnd( other.ioTimeEnd ), cpuTimer( other.cpuTimer), preempted(other.preempted), inMemory(other.inMemory), turnAroundStart(other.turnAroundStart) { 
-			timeWaiting = 0;
-		}
+		// Process( const Process& other ) : procNum( other.procNum ), arrivalTime( other.arrivalTime), burstTime( other.burstTime ), burstCount( other.burstCount ), ioTime( other.ioTime), memorySize( other.memorySize), ioTimeEnd( other.ioTimeEnd ), cpuTimer( other.cpuTimer), preempted(other.preempted), inMemory(other.inMemory), turnAroundStart(other.turnAroundStart) { 
+		// 	timeWaiting = 0;
+		// }
 		~Process() { }
 
 		int const getSize() const {
