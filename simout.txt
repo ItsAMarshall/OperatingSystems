@@ -1,0 +1,30 @@
+Algorithm Round Robin and First Fit
+ -- average CPU burst time: 403.846 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 1204.69 ms
+ -- total number of context switches: 19
+Algorithm SRT and Best-Fit
+ -- average CPU burst time: 0 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 0 ms
+ -- total number of context switches: 0
+Algorithm SRT and Next-Fit
+ -- average CPU burst time: 463.75 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 1443.3 ms
+ -- total number of context switches: 26
+Algorithm RR and First-Fit
+ -- average CPU burst time: 403.846 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 808.308 ms
+ -- total number of context switches: 46
+Algorithm RR and Best-Fit
+ -- average CPU burst time: 0 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 0 ms
+ -- total number of context switches: 0
+Algorithm RR and Next-Fit
+ -- average CPU burst time: 463.75 ms
+ -- average wait time: 0 ms
+ -- average turnaround time: 1550.7 ms
+ -- total number of context switches: 128

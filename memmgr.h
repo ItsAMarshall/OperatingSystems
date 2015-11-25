@@ -29,11 +29,11 @@ class MemMgr {
 
 		bool InsertProcess(Process* process) {
 		  bool success = false;
-		  if (algorithm == "first") {
+		  if (algorithm == "First-Fit") {
 		    success = this->InsertFirst(process);
-		  } else if (algorithm == "best") {
+		  } else if (algorithm == "Best-Fit") {
 		 	  success = this->InsertBest(process);
-		  } else if (algorithm == "next") {
+		  } else if (algorithm == "Next-Fit") {
 		    success = this->InsertNext(process);
 		  } else {
 		    std::cerr << "ERROR: INVALID ALGORITHM" << std::endl;

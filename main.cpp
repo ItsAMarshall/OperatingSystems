@@ -39,6 +39,8 @@ using namespace std;
 void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode, int timer ) {
 	deque<Process>::iterator itr;
 	proc->timeWaiting = 0;
+	proc->turnAroundStart = timer;
+
 	for( itr = cpuQueue->begin(); itr != cpuQueue->end(); ++itr ) {
 		if ( mode == "SRT" ) {
 			if( itr->burstTime > proc->burstTime ) {
@@ -48,7 +50,7 @@ void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode, int 
 		}
 	}
 	cpuQueue->push_back(*proc);
-	proc->turnAroundStart = timer;
+	
 	return;
 }
 
@@ -199,7 +201,7 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 				PushBack(cpuQueue, &(*itr), mode, timer);
 
 				PrintTime(timer);
-				cout << "Process '" << itr->procNum << "' added to system";
+				cout << "Process '" << itr->procNum << "' added to system ";
 				PrintQueue(cpuQueue);
 
 				statistics->AddCpuTime(itr->burstTime, itr->burstCount);
@@ -281,7 +283,10 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 	
 	PrintTime(timer);
 	cout << "Simulator started for " << mode << " ";
-	PrintQueue(cpuQueue);
+	if( mode == "RR" ) {
+		cout << "(t_slice " << t_slice << ") ";
+	}
+	cout << "and " << memMode << " " << endl;
 	
 	//check priority of cpuqueue top
 	//if less than cpu priority thats a preempt
@@ -318,6 +323,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 
 			cout << "Process '" << preemptCatch->procNum << "' completed I/O ";
 			if( mode == "RR" ) {
+				preemptCatch->turnAroundStart = timer;
 				cpuQueue->push_back(*preemptCatch);
 				PrintQueue(cpuQueue);
 			}
@@ -384,12 +390,14 @@ int main(int argc, char* argv[]) {
 	int n;
 	bool err;
 	fstream file("processes.txt");
-	vector<Process>* processVector = new vector<Process>;
+	ofstream output;
+	output.open("simout.txt");
 
+	vector<Process>* processVector = new vector<Process>;
 	stats* statistics = new stats("Round Robin", "First Fit");
 
-	mode = "RR";
-	memMode = "first";
+	mode = "SRT";
+	memMode = "First-Fit";
 	// file.clear();
 	// file.seekg( 0, file.beg);
 	err = ReadFile(file, processVector, mode);
@@ -397,8 +405,75 @@ int main(int argc, char* argv[]) {
 		return -1;
 	n = processVector->size();
 	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
 
-	cout << endl << endl;
+	mode = "SRT";
+	memMode = "Best-Fit";
+	statistics->Reset("SRT", "Best-Fit");
+	file.clear();
+	file.seekg( 0, file.beg);
+	err = ReadFile(file, processVector, mode);
+	if( err )
+		return -1;
+	n = processVector->size();
+	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
+
+	mode = "SRT";
+	memMode = "Next-Fit";
+	statistics->Reset("SRT", "Next-Fit");
+	file.clear();
+	file.seekg( 0, file.beg);
+	err = ReadFile(file, processVector, mode);
+	if( err )
+		return -1;
+	n = processVector->size();
+	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
+
+	mode = "RR";
+	memMode = "First-Fit";
+	statistics->Reset("RR", "First-Fit");
+	file.clear();
+	file.seekg( 0, file.beg);
+	err = ReadFile(file, processVector, mode);
+	if( err )
+		return -1;
+	n = processVector->size();
+	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
+
+	mode = "RR";
+	memMode = "Best-Fit";
+	statistics->Reset("RR", "Best-Fit");
+	file.clear();
+	file.seekg( 0, file.beg);
+	err = ReadFile(file, processVector, mode);
+	if( err )
+		return -1;
+	n = processVector->size();
+	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
+
+	mode = "RR";
+	memMode = "Next-Fit";
+	statistics->Reset("RR", "Next-Fit");
+	file.clear();
+	file.seekg( 0, file.beg);
+	err = ReadFile(file, processVector, mode);
+	if( err )
+		return -1;
+	n = processVector->size();
+	Perform( processVector, t_cs, mode, memMode, statistics);
+	statistics->Print(output);
+	cout << endl;
+
+	output.close();
 
 	return 0;
 }

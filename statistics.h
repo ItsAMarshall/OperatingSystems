@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 
 using namespace std;
@@ -27,7 +28,10 @@ public:
 
 	~stats();
 
-	void reset(string mode, string memMode) {
+	void Reset(string mode, string memMode) {
+		algo = mode;
+		memAlgo = memMode;
+
 		cpuBurstTimeTotal = 0;
 		cpuBurstTimeCount = 0;
 		cpuBurstTimeAverage = 0.0;
@@ -67,6 +71,13 @@ public:
 		++defragTimeCount;
 	}
 
+	void Print(ofstream& output) {
+		output << "Algorithm " << algo << " and " << memAlgo << endl;
+		output << " -- average CPU burst time: " << cpuBurstTimeAverage << " ms" << endl;
+		output << " -- average wait time: " << waitTimeAverage << " ms" << endl;
+		output << " -- average turnaround time: " << turnAroundtimeAverage << " ms" << endl;
+		output << " -- total number of context switches: " << contextSwitch << endl;
+	}
 
 
 	string algo;
