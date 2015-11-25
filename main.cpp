@@ -30,12 +30,13 @@
 #include <vector>
 #include "process.h"
 #include "memmgr.h"
+#include "statistics.h"
 
 
 using namespace std;
 
 
-void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode ) {
+void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode, int timer ) {
 	deque<Process>::iterator itr;
 	proc->timeWaiting = 0;
 	for( itr = cpuQueue->begin(); itr != cpuQueue->end(); ++itr ) {
@@ -47,6 +48,7 @@ void PushBack( deque<Process>* cpuQueue, Process* proc, const string& mode ) {
 		}
 	}
 	cpuQueue->push_back(*proc);
+	proc->turnAroundStart = timer;
 	return;
 }
 
@@ -116,7 +118,7 @@ bool Preempt( Process* cpu, Process* proc, const string& mode ) {
 }
 
 //Removes Process from Queue and adds to "CPU" 
-void LoadCPU( deque<Process>* cpuQueue, Process* proc, Process* cpu , int timer, int t_cs) {
+void LoadCPU( deque<Process>* cpuQueue, Process* proc, Process* cpu , int timer, int t_cs, stats* statistics) {
 	timer += t_cs;
 	*cpu = *proc;
 	if( cpu->preempted == false)
@@ -126,12 +128,17 @@ void LoadCPU( deque<Process>* cpuQueue, Process* proc, Process* cpu , int timer,
 	//cout << "==END TIME: " << cpu->burstTime - cpu->cpuTimer + timer;
 	PrintQueue(cpuQueue);
 
+	statistics->contextSwitch++;
+
 	return;
 }
 
 //Moves process from "CPU" to I/O priority queue
-void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* ioQueue, int timer, MemMgr* memory ) {
+void LoadIO( Process* proc, deque<Process>* cpuQueue, priority_queue<Process>* ioQueue, int timer, MemMgr* memory, stats* statistics ) {
 	proc->burstCount--;
+	proc->turnAroundTotal = timer - proc->turnAroundStart;
+	statistics->AddTurnAroundTime(proc->turnAroundTotal);
+
 	if( proc->burstCount == 0 ) {
 		memory->RemoveProcess(proc);
 		PrintTime(timer);
@@ -172,16 +179,16 @@ Process* CheckIO( priority_queue<Process>* ioQueue, deque<Process>* cpuQueue, Pr
 	return NULL;
 }
 
-void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, const string& mode, int timer, int t_cs) {
-		PrintTime(timer);
-		cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
-		PushBack(cpuQueue, cpu, mode);
-		PrintQueue(cpuQueue);
-		//timer += t_cs;
-		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);		
-}
+// void SwapPreempt(deque<Process>* cpuQueue, Process* cpu, Process* preemptCatch, const string& mode, int timer, int t_cs, stats* statistics) {
+// 		PrintTime(timer);
+// 		cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
+// 		PushBack(cpuQueue, cpu, mode, timer);
+// 		PrintQueue(cpuQueue);
+// 		//timer += t_cs;
+// 		LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs, statistics);		
+// }
 
-void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode, MemMgr* memory) {
+void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int timer, const string& mode, MemMgr* memory, stats* statistics) {
 	vector<Process>::iterator itr = processVector->begin();
 
 
@@ -189,15 +196,15 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 		if( itr->arrivalTime <= timer ) {
 
 			if( memory->InsertProcess(&(*itr)) ) {
-				PushBack(cpuQueue, &(*itr), mode);
+				PushBack(cpuQueue, &(*itr), mode, timer);
 
 				PrintTime(timer);
 				cout << "Process '" << itr->procNum << "' added to system";
 				PrintQueue(cpuQueue);
 
-				processVector->erase(itr);
+				statistics->AddCpuTime(itr->burstTime, itr->burstCount);
 
-				cout << processVector->size() << endl;
+				processVector->erase(itr);
 			}
 			else {
 				PrintTime(timer);
@@ -218,11 +225,13 @@ void CheckArrival(vector<Process>* processVector, deque<Process>* cpuQueue, int 
 				memory->PrintMemory();
 
 				if( memory->InsertProcess(&(*itr)) ) {
-					PushBack(cpuQueue, &(*itr), mode);
+					PushBack(cpuQueue, &(*itr), mode, timer);
 
 					PrintTime(timer);
 					cout << "Process '" << itr->procNum << "' added to system";
 					PrintQueue(cpuQueue);
+
+					statistics->AddCpuTime(itr->burstTime, itr->burstCount);
 
 					processVector->erase(itr);
 				}
@@ -256,7 +265,7 @@ bool CheckRR( Process* cpu, deque<Process>* cpuQueue, int timer, int t_slice) {
 	return false;
 }
 
-void Perform(vector<Process>* processVector, int t_cs, const string& mode, const string& memMode) {
+void Perform(vector<Process>* processVector, int t_cs, const string& mode, const string& memMode, stats* statistics) {
 
 	MemMgr* memory = new MemMgr(memMode);
 	memory->InitMemory();
@@ -279,14 +288,14 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 
 	while( true ) {
 
-		CheckArrival(processVector, cpuQueue, timer, mode, memory);
+		CheckArrival(processVector, cpuQueue, timer, mode, memory, statistics);
 
 		preemptCatch = NULL;
 
 		if( cpuInUse && cpu != NULL) {
 			if( cpu->cpuTimer >= cpu->burstTime) {
 				cpu->preempted = false;
-				LoadIO( cpu, cpuQueue, ioQueue, timer, memory );
+				LoadIO( cpu, cpuQueue, ioQueue, timer, memory, statistics );
 				cpuInUse = false;
 
 			}
@@ -299,7 +308,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 	
 				preemptCatch = &cpuQueue->front();
 				cpuQueue->pop_front();
-				LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
+				LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs, statistics);
 				timer += t_cs;
 			}
 		}
@@ -316,20 +325,20 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 				if( Preempt(cpu, preemptCatch, mode) ) {
 					PrintQueue(cpuQueue);
 					if( cpu->burstCount > 0){
-						PushBack(cpuQueue, cpu, mode);
+						PushBack(cpuQueue, cpu, mode, timer);
 					
 						PrintTime(timer);
 						cout << "Process '" << cpu->procNum << "' preempted by P" << preemptCatch->procNum << " ";
 						PrintQueue(cpuQueue);
 					}
 					
-					LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs);
+					LoadCPU(cpuQueue, preemptCatch, cpu, timer, t_cs, statistics);
 					timer += t_cs;
 					cpuInUse = true;
 				}
 				else {
 					preemptCatch->preempted = false;
-					PushBack(cpuQueue, preemptCatch, mode);
+					PushBack(cpuQueue, preemptCatch, mode, timer);
 					PrintQueue(cpuQueue);
 				}
 			}
@@ -344,7 +353,7 @@ void Perform(vector<Process>* processVector, int t_cs, const string& mode, const
 			//cout << preemptCatch->cpuTimer << endl;
 			cpuQueue->pop_front();
 			//cout << preemptCatch->cpuTimer << endl;
-			LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs);
+			LoadCPU( cpuQueue, preemptCatch, cpu, timer, t_cs, statistics);
 			timer += t_cs;
 			//cout << preemptCatch->cpuTimer << endl;
 			cpuInUse = true;
@@ -377,6 +386,8 @@ int main(int argc, char* argv[]) {
 	fstream file("processes.txt");
 	vector<Process>* processVector = new vector<Process>;
 
+	stats* statistics = new stats("Round Robin", "First Fit");
+
 	mode = "RR";
 	memMode = "first";
 	// file.clear();
@@ -385,7 +396,7 @@ int main(int argc, char* argv[]) {
 	if( err )
 		return -1;
 	n = processVector->size();
-	Perform( processVector, t_cs, mode, memMode);
+	Perform( processVector, t_cs, mode, memMode, statistics);
 
 	cout << endl << endl;
 

@@ -38,6 +38,9 @@ class Process
 		int timeWaiting;
 		bool preempted;
 		bool inMemory;
+
+		int turnAroundStart;
+		int turnAroundTotal;
 };
 
 //Used for Priority Queue
